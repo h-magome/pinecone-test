@@ -20,19 +20,27 @@ function App() {
 
     try {
       if (action === 'register') {
+        // OpenAIクライアントの設定
+        const openai = new OpenAI({
+          apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+          dangerouslyAllowBrowser: true
+        });
+        // テキストをベクトル化
+        const response = await openai.embeddings.create({
+          model: 'text-embedding-ada-002',
+          input: content,
+        });
+        const embedding = response.data[0].embedding;
         // Pineconeに登録する処理
         const pc = new Pinecone({
           apiKey: import.meta.env.VITE_PINECONE_API_KEY || ''
         });
         const index = pc.index('ses-matching-test');
         
-        // 簡易的なベクトル生成（実際のアプリケーションでは適切なベクトル化が必要）
-        const randomVector = Array(10).fill(0).map(() => Math.random());
-        
         await index.namespace('ns1').upsert([
           {
             id: `vec-${Date.now()}`, // ユニークなID
-            values: randomVector,
+            values: embedding,
             metadata: { content: content }
           }
         ]);
@@ -45,17 +53,39 @@ function App() {
         };
         setResponse(mockResponse);
       } else {
-        // 検索処理（既存のモック処理を維持）
-        const mockResponse: ApiResponse = {
+        // OpenAIクライアントの設定
+        const openai = new OpenAI({
+          apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+          dangerouslyAllowBrowser: true
+        });
+        // 検索クエリをベクトル化
+        const embeddingResponse = await openai.embeddings.create({
+          model: 'text-embedding-ada-002',
+          input: content,
+        });
+        const embedding = embeddingResponse.data[0].embedding;
+        
+        // Pineconeで検索
+        const pc = new Pinecone({
+          apiKey: import.meta.env.VITE_PINECONE_API_KEY || ''
+        });
+        const index = pc.index('ses-matching-test');
+        
+        const searchResponse = await index.namespace('ns1').query({
+          topK: 2,
+          vector: embedding,
+          includeValues: true,
+          includeMetadata: true
+        });
+        
+        const apiResponse: ApiResponse = {
           message: "Success",
           timestamp: new Date().toISOString(),
-          content: `検索: ${content}`,
+          content: `検索結果: ${JSON.stringify(searchResponse.matches)}`,
           action
         };
         
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setResponse(mockResponse);
+        setResponse(apiResponse);
       }
     } catch (error) {
       console.error('Error:', error);
