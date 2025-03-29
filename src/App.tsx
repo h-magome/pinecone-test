@@ -21,9 +21,7 @@ function App() {
     try {
       if (action === 'register') {
         // OpenAIクライアントの設定
-        // const openai = new OpenAI({
-        //   apiKey: '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',
-        // });
+
         // Pineconeに登録する処理
         const pc = new Pinecone({
           apiKey: '45ccab6d-ae58-40a8-b944-69d0a1d833cb'
