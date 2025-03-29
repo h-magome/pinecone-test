@@ -20,8 +20,6 @@ function App() {
 
     try {
       if (action === 'register') {
-        // OpenAIクライアントの設定
-
         // Pineconeに登録する処理
         const pc = new Pinecone({
           apiKey: '45ccab6d-ae58-40a8-b944-69d0a1d833cb'
