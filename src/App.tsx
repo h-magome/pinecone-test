@@ -22,7 +22,7 @@ function App() {
       if (action === 'register') {
         // Pineconeに登録する処理
         const pc = new Pinecone({
-          apiKey: '45ccab6d-ae58-40a8-b944-69d0a1d833cb'
+          apiKey: import.meta.env.VITE_PINECONE_API_KEY || ''
         });
         const index = pc.index('ses-matching-test');
         
