@@ -12,6 +12,7 @@ interface ApiResponse {
 
 function App() {
   const [content, setContent] = useState('');
+  const [id, setId] = useState('');
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,14 +42,17 @@ function App() {
           {
             id: `vec-${Date.now()}`, // ユニークなID
             values: embedding,
-            metadata: { content: content }
+            metadata: { 
+              content: content,
+              id: id || '' // idが空の場合は空文字を設定
+            }
           }
         ]);
 
         const mockResponse: ApiResponse = {
           message: "Success",
           timestamp: new Date().toISOString(),
-          content: `登録: ${content}`,
+          content: `登録: ${content}${id ? `, ID: ${id}` : ''}`,
           action
         };
         setResponse(mockResponse);
@@ -75,13 +79,20 @@ function App() {
           topK: 2,
           vector: embedding,
           includeValues: true,
-          includeMetadata: true
+          includeMetadata: true,
+          filter: id ? { id: { $eq: id } } : undefined // idが入力されている場合、フィルターを追加
         });
         
+        // valuesフィールドを除外した検索結果を作成
+        const cleanedMatches = searchResponse.matches.map(match => {
+          const { values, ...rest } = match;
+          return rest;
+        });
+
         const apiResponse: ApiResponse = {
           message: "Success",
           timestamp: new Date().toISOString(),
-          content: `検索結果: ${JSON.stringify(searchResponse.matches)}`,
+          content: `検索結果: ${JSON.stringify(cleanedMatches)}`,
           action
         };
         
@@ -101,6 +112,20 @@ function App() {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">PineconeTEST</h1>
           
           <div className="space-y-4">
+            <div>
+              <label htmlFor="id" className="block text-sm font-medium text-gray-700 mb-1">
+                エンジニアIDまたはプロジェクトID
+              </label>
+              <input
+                id="id"
+                type="text"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="IDを入力してください"
+              />
+            </div>
+            
             <div>
               <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
                 内容
