@@ -10,11 +10,15 @@ interface ApiResponse {
   action: 'register' | 'search';
 }
 
+// 選択肢の型定義
+type EntryType = '案件' | 'エンジニア';
+
 function App() {
   const [content, setContent] = useState('');
   const [id, setId] = useState('');
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [entryType, setEntryType] = useState<EntryType>('エンジニア');
 
   const handleAction = async (action: 'register' | 'search') => {
     setIsLoading(true);
@@ -44,7 +48,8 @@ function App() {
             values: embedding,
             metadata: { 
               content: content,
-              id: id || '' // idが空の場合は空文字を設定
+              id: id || '', // idが空の場合は空文字を設定
+              type: entryType // 「案件」または「エンジニア」のタイプを追加
             }
           }
         ]);
@@ -52,7 +57,7 @@ function App() {
         const mockResponse: ApiResponse = {
           message: "Success",
           timestamp: new Date().toISOString(),
-          content: `登録: ${content}${id ? `, ID: ${id}` : ''}`,
+          content: `登録: ${content}${id ? `, ID: ${id}` : ''}, タイプ: ${entryType}`,
           action
         };
         setResponse(mockResponse);
@@ -75,12 +80,21 @@ function App() {
         });
         const index = pc.index('ses-matching-test');
         
+        // 検索条件を設定
+        // 案件を選択した場合はエンジニアデータを、エンジニアを選択した場合は案件データを検索
+        const searchType = entryType === '案件' ? 'エンジニア' : '案件';
+        
         const searchResponse = await index.namespace('ns1').query({
           topK: 2,
           vector: embedding,
           includeValues: true,
           includeMetadata: true,
-          filter: id ? { id: { $eq: id } } : undefined // idが入力されている場合、フィルターを追加
+          filter: {
+            $and: [
+              id ? { id: { $eq: id } } : {},
+              { type: { $eq: searchType } }  // タイプによるフィルタリングを追加
+            ]
+          }
         });
         
         // valuesフィールドを除外した検索結果を作成
@@ -92,7 +106,7 @@ function App() {
         const apiResponse: ApiResponse = {
           message: "Success",
           timestamp: new Date().toISOString(),
-          content: `検索結果: ${JSON.stringify(cleanedMatches)}`,
+          content: `検索結果 (${entryType}が検索、${searchType}を抽出): ${JSON.stringify(cleanedMatches)}`,
           action
         };
         
@@ -112,6 +126,36 @@ function App() {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">PineconeTEST</h1>
           
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                タイプを選択
+              </label>
+              <div className="flex space-x-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    className="form-radio text-indigo-600"
+                    name="entryType"
+                    value="エンジニア"
+                    checked={entryType === 'エンジニア'}
+                    onChange={() => setEntryType('エンジニア')}
+                  />
+                  <span className="ml-2">エンジニア</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    className="form-radio text-indigo-600"
+                    name="entryType"
+                    value="案件"
+                    checked={entryType === '案件'}
+                    onChange={() => setEntryType('案件')}
+                  />
+                  <span className="ml-2">案件</span>
+                </label>
+              </div>
+            </div>
+            
             <div>
               <label htmlFor="id" className="block text-sm font-medium text-gray-700 mb-1">
                 エンジニアIDまたはプロジェクトID
